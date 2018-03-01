@@ -1,10 +1,14 @@
 ﻿@{
 	ViewBag.Title = "Chat";
 }
-<h2>Chat</h2>
+<h2>Chat as <strong id="username"></strong></h2>
 <div class="container">
+	<label for="message">Message:</label>
 	<input type="text" id="message" />
 	<input type="button" id="sendmessage" value="Send" />
+	<label for="sendto">To: </label>
+	<input type="text" id="sendto" />
+	<input type="button" id="sendprivate" value="Send Private Message" />
 	<input type="hidden" id="displayname" />
 	<ul id="discussion"></ul>
 </div>
@@ -17,33 +21,45 @@
 	<script src="~/signalr/hubs"></script>
 	<!--SignalR script to update the chat page and send messages.-->
 	<script>
-        $(function () {
-            // Reference the auto-generated proxy for the hub.
-            var chat = $.connection.chatHub;
-            // Create a function that the hub can call back to display messages.
-            chat.client.addNewMessageToPage = function (name, message) {
-                // Add the message to the page.
-                $('#discussion').append('<li><strong>' + htmlEncode(name)
-                    + '</strong>: ' + htmlEncode(message) + '</li>');
-            };
-            // Get the user name and store it to prepend to messages.
-            $('#displayname').val(prompt('Enter your name:', ''));
-            // Set initial focus to message input box.
-            $('#message').focus();
-            // Start the connection.
-            $.connection.hub.start().done(function () {
-                $('#sendmessage').click(function () {
-                    // Call the Send method on the hub.
-                    chat.server.send($('#displayname').val(), $('#message').val());
-                    // Clear text box and reset focus for next comment.
-                    $('#message').val('').focus();
-                });
-            });
-        });
-        // This optional function html-encodes messages for display in the page.
-        function htmlEncode(value) {
-            var encodedValue = $('<div />').text(value).html();
-            return encodedValue;
-        }
+		$(function () {
+			// Reference the auto-generated proxy for the hub.
+			var chat = $.connection.chatHub;
+			// Create a function that the hub can call back to display messages.
+			chat.client.addNewMessageToPage = function (name, message, isPrivate) {
+				// Add the message to the page.
+				var encodedMessage = htmlEncode(message);
+				if (isPrivate === true) {
+					encodedMessage = '<i style="color:red;">' + encodedMessage + '</i>';
+				}
+				$('#discussion').append('<li><strong>' + htmlEncode(name) + '</strong>: ' + encodedMessage + '</li>');
+			};
+			// Get the user name and store it to prepend to messages.
+			$('#displayname').val(prompt('Enter your name:', ''));
+			var username = $('#displayname').val();
+			$('#username').html(username);
+			// Set initial focus to message input box.
+			$('#message').focus();
+			// Start the connection.
+			$.connection.hub.start().done(function () {
+				chat.server.register(username);
+				$('#sendmessage').click(function () {
+					// Call the Send method on the hub.
+					chat.server.send(username, $('#message').val());
+					// Clear text box and reset focus for next comment.
+					$('#message').val('').focus();
+				});
+				$('#sendprivate').click(function () {
+					// Call the Send method on the hub.
+					chat.server.sendPrivate(username, $('#sendto').val(), $('#message').val());
+					// Clear text box and reset focus for next comment.
+					$('#message').val('').focus();
+				});
+			});
+		});
+		// This optional function html-encodes messages for display in the page.
+		function htmlEncode(value) {
+			var encodedValue = $('<div />').text(value).html();
+			return encodedValue;
+		}
 	</script>
-}
+	}
